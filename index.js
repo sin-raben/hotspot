@@ -17,15 +17,17 @@ var spawn = require('child_process').spawn;
 var pgp = require('pg-promise')();
 var cn = 'postgres://postgres:postgres@localhost:5432/hotspot';
 var db = pgp(cn);
+const exec = require('child_process').exec;
+
 
 try {
     var sms = new SMSru("api_id");
-    sms.sms_send({
+    /*sms.sms_send({
         to: '79112223344',
         text: 'Текст SMS'
     }, function(e) {
         console.log(e.description);
-    });
+    });*/
 
 } catch (err) {
     console.log('err', err);
@@ -56,23 +58,21 @@ var ff = (url, path) =>
         });
     });
 
-var addIptables = (ip) =>
+var addMac = (mac) =>
     new Promise(function(resolve, reject) {
-        var ping = spawn("ping", ["-c", "1", ip]);
-        resolve(ping);
-        reject();
+        exec('iptables -I internet 1 -t mangle -m mac --mac-source "' + mac + '" -j RETURN', (error, stdout, stderr) => {
+            resolve(stdout);
+            reject(stderr);
+        });
     });
-var removeIptables = (ip) =>
-    new Promise(function(resolve, reject) {
-        var ping = spawn("ping", ["-c", "1", ip]);
-        resolve(ping);
-        reject();
+var removeMac = (mac) =>
+new Promise(function(resolve, reject) {
+    exec('iptables -D internet -t mangle -m mac --mac-source "' + mac + '" -j RETURN', (error, stdout, stderr) => {
+        resolve(stdout);
+        reject(stderr);
     });
+});
 
-if (false) {
-    addIptables();
-    removeIptables();
-}
 
 // Запрос пользователей которые имеют доступ к инету trueUsers
 db.query("SELECT mac, ip, sb, se FROM sessions WHERE status = 4 AND se > now()").then((value) => {
@@ -83,9 +83,20 @@ db.query("SELECT mac, ip, sb, se FROM sessions WHERE status = 4 AND se > now()")
             sb: new Date(Date.parse(elem.sb)),
             se: new Date(Date.parse(elem.se))
         };
+        //addMac(elem.mac).then(()=>{});
     });
-    console.log("value", trueUsers);
+    //console.log("value", trueUsers);
 });
+
+/*trueUsers["93:DE:80:7F:84:BE"]={
+    "mac": "93:DE:80:7F:84:BE",
+    ip: "elem.ip",
+    sb: new Date(),
+    se: new Date((+new Date())+10000)
+
+};
+console.log("value", trueUsers);*/
+
 // Запрос пользователей которые имеют доступ к инету authUsers
 db.query("SELECT mac, ip, mobile, pin, sb, se, status FROM sessions WHERE status > 0 AND status < 4").then((value) => {
     value.forEach(elem => {
@@ -117,6 +128,12 @@ var genPost = function*(ip, mac, obj) {
             if (true) {
                 authUsers[mac].mobile = "" + form.fields.phoneNumber;
                 authUsers[mac].pin = ('000000' + (~~(10000 * Math.random()))).slice(-4);
+                sms.sms_send({
+                    to: authUsers[mac].mobile,
+                    text: 'Код доступа'+authUsers[mac].pin
+                }, function(e) {
+                    console.log(e.description);
+                });
                 //console.log('pin', authUsers[mac].pin);
                 yield db.query("UPDATE sessions SET mobile = ${mobile}, pin = ${pin}, status = 1 WHERE mac = ${mac} AND ip = ${ip} AND status = 0", {
                     mac: mac,
@@ -126,7 +143,7 @@ var genPost = function*(ip, mac, obj) {
                 });
 
 
-                return '{"status": true,"pin": "'+authUsers[mac].pin+'"}';
+                return '{"status": true,"pin": "' + authUsers[mac].pin + '"}';
             } else {
                 return '{"status": false}';
             }
@@ -136,14 +153,15 @@ var genPost = function*(ip, mac, obj) {
 
 
                 console.log("Победа"); /*добавить в базу дданных информацию о пользователе, добавить разрешающее правило в iptables*/
+                yield addMac(mac);
                 trueUsers[mac] = authUsers[mac];
                 trueUsers[mac].sb = +(new Date());
                 trueUsers[mac].se = +trueUsers[mac].sb + 60 * 60 * 1000; //предустановен час сеанса
-                console.log('trueUsers[mac]',trueUsers[mac] );
+                console.log('trueUsers[mac]', trueUsers[mac]);
                 yield db.query("UPDATE sessions SET status = 4, se = ${se} WHERE mac = ${mac} AND ip = ${ip} AND status >0 AND status <4 ", {
                     mac: mac,
                     ip: ip,
-                    se: new Date(trueUsers[mac].se-new Date().getTimezoneOffset()*60000)
+                    se: new Date(trueUsers[mac].se - new Date().getTimezoneOffset() * 60000)
                 });
                 delete authUsers[mac];
                 return '{"status": true}';
@@ -232,14 +250,15 @@ app.use(function*(next) {
 
 setInterval(function function_name() {
     var time = +(new Date());
-    for (let prop in trueUsers) {
-        if (trueUsers[prop].se < time) {
-            console.log("Аренда окончена", prop);
-            delete trueUsers[prop];
+    for (let mac in trueUsers) {
+        if (trueUsers[mac].se < time) {
+            console.log("Аренда окончена", mac);
+            delete trueUsers[mac];
+            removeMac(mac).then(() => {});
             //убираем разрешение из iptables
         }
     }
-}, 60000);
+}, 6000);
 var options = {
     key: fs.readFileSync('key.pem'),
     cert: fs.readFileSync('cert.pem'),
