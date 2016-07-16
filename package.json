@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "koa": "latest",
+    "koa-static": "latest",
+    "koa-formidable": "latest"
+  }
+}

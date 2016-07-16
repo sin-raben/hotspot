@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Авторизация</title>
+    <script src="./script.js"></script>
+</head>
+
+<body>
+    <form action="http://192.168.0.97:8090/" method="POST" target="" autocomplete="off">
+        <div><b>Укажите  свой номер телефона для авторизации*</b></div>
+        <input id="phoneNumber" type="tel" name="answer" autocomplete="on" placeholder="Введите номер телефона в формате +7(ХХХ)ХХ-ХХ-ХХ"/>
+        <br>
+        <input id="passPhoneNumber" name="answer"/>
+    </form>
+    <button id="btnGetC" type="button" name="button" onclick="sendTel()" autocomplete="off">Получить код</button>
+    <button id="btnSednC" type="button" name="button2" onclick="sendCode()" disabled autocomplete="off">Отправить код</button>
+</body>
+
+</html>

@@ -1,0 +1,15 @@
+{
+  "uploadOnSave": true,
+  "useAtomicWrites": false,
+  "deleteLocal": true,
+  "hostname": "192.168.0.219",
+  "port": "22",
+  "target": "/opt/hotspot",
+  "ignore": [
+    ".remote-sync.json",
+    ".git/**"
+  ],
+  "username": "root",
+  "password": "d7SMG9ak",
+  "transport": "scp"
+}
