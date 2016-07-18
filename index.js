@@ -220,7 +220,7 @@ app.use(function*(next) {
     }
     //проверка на наличие в списке автаризованных
 
-
+    console.log('urlParsed', urlParsed);
     if (trueUsers[mac]) {
         this.res.statusCode = 200;
         this.body = "Я тя помню";
@@ -234,7 +234,7 @@ app.use(function*(next) {
             var path = returnPath[ffilt[0]];
             var r = yield ff(urlParsed, path);
             if (r) {
-                if (urlParsed.path == '/index.html') {
+                if (urlParsed.pathname == '/index.html') {
                     this.response.status = 401;
                     this.res.setHeader('WWW-Authenticate', 'Basic realm="myRealm"');
                     console.log('401', 401);
@@ -244,7 +244,7 @@ app.use(function*(next) {
                     this.response.status = 511;
                     console.log('511', 511);
                     //this.status = 511;/**/
-                    this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html');
+                    this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html?url='+this.req.url);
                     this.body = r;
                 }
             } else {
