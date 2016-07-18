@@ -5,15 +5,12 @@ const koa = require('koa'),
     http = require('http'),
     https = require('https'),
     server = require('koa-static'),
-    //arp = require('node-arp'),
-    //util = require('util'),
     fs = require('fs'),
     url = require('url'),
     SMSru = require('sms_ru'),
     getMAC = require('./getmac'),
     ipInFilters = require('./ipinfilters'),
     filters = require('./o');
-var spawn = require('child_process').spawn;
 var pgp = require('pg-promise')();
 var cn = 'postgres://postgres:postgres@localhost:5432/hotspot';
 var db = pgp(cn);
@@ -45,13 +42,16 @@ var trueUsers = {};
 var authUsers = {};
 var ff = (url, path) =>
     new Promise(function(resolve, reject) {
-        if (url.search === "") {
-            fs.exists(path + url.path, function(exists) {
-                if (exists) {
-                    resolve(false);
-                }
-            });
+        if (url.path !== '/index.html') {
+            if (url.search === "") {
+                fs.exists(path + url.path, function(exists) {
+                    if (exists) {
+                        resolve(false);
+                    }
+                });
+            }
         }
+
         fs.readFile(path + '/index.html', (err, data) => {
             if (err) reject();
             resolve(data.toString());
@@ -66,12 +66,12 @@ var addMac = (mac) =>
         });
     });
 var removeMac = (mac) =>
-new Promise(function(resolve, reject) {
-    exec('iptables -D internet -t mangle -m mac --mac-source "' + mac + '" -j RETURN', (error, stdout, stderr) => {
-        resolve(stdout);
-        reject(stderr);
+    new Promise(function(resolve, reject) {
+        exec('iptables -D internet -t mangle -m mac --mac-source "' + mac + '" -j RETURN', (error, stdout, stderr) => {
+            resolve(stdout);
+            reject(stderr);
+        });
     });
-});
 
 
 // Запрос пользователей которые имеют доступ к инету trueUsers
@@ -130,7 +130,7 @@ var genPost = function*(ip, mac, obj) {
                 authUsers[mac].pin = ('000000' + (~~(10000 * Math.random()))).slice(-4);
                 sms.sms_send({
                     to: authUsers[mac].mobile,
-                    text: 'Код доступа'+authUsers[mac].pin
+                    text: 'Код доступа' + authUsers[mac].pin
                 }, function(e) {
                     console.log(e.description);
                 });
@@ -234,8 +234,19 @@ app.use(function*(next) {
             var path = returnPath[ffilt[0]];
             var r = yield ff(urlParsed, path);
             if (r) {
-                this.res.statusCode = 511;
-                this.body = r;
+                if (urlParsed.path == '/index.html') {
+                    this.response.status = 401;
+                    this.res.setHeader('WWW-Authenticate', 'Basic realm="myRealm"');
+                    console.log('401', 401);
+                    //this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html');
+                    this.body = r;
+                } else {
+                    this.response.status = 511;
+                    console.log('511', 511);
+                    //this.status = 511;/**/
+                    this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html');
+                    this.body = r;
+                }
             } else {
                 yield server(path, {});
             }
