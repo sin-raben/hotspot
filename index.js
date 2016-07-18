@@ -15,8 +15,7 @@ var pgp = require('pg-promise')();
 var cn = 'postgres://postgres:postgres@localhost:5432/hotspot';
 var db = pgp(cn);
 const exec = require('child_process').exec;
-
-
+var host = "192.168.0.219";
 try {
     var sms = new SMSru("api_id");
     /*sms.sms_send({
@@ -40,9 +39,9 @@ var trueUsers = {};
 //не авторизованные коды доступа, код доступа одноразовый
 //var authCode = {};
 var authUsers = {};
-var ff = (url, path) =>
+var ff = (url, path, h) =>
     new Promise(function(resolve, reject) {
-        if (url.path !== '/index.html') {
+        if ((url.path !== '/index.html') && (host === h)) {
             if (url.search === "") {
                 fs.exists(path + url.path, function(exists) {
                     if (exists) {
@@ -232,7 +231,7 @@ app.use(function*(next) {
         var ffilt = ipInFilters(ip, filters);
         if (ffilt.length > 0) {
             var path = returnPath[ffilt[0]];
-            var r = yield ff(urlParsed, path);
+            var r = yield ff(urlParsed, path, this.request.host);
             if (r) {
                 if (urlParsed.pathname == '/index.html') {
                     this.response.status = 401;
@@ -244,9 +243,9 @@ app.use(function*(next) {
                 } else {
                     this.response.status = 511;
                     console.log('511', 511);
-                    console.log('this.response', this.request.host);
+                    //console.log('this.response', this.request.host);
                     //this.status = 511;/**/
-                    this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html?url="'+this.request.host+this.req.url+'"');
+                    this.res.setHeader('refresh', '0; url=http://' + host + '/index.html?url="' + this.request.host + this.req.url + '"');
                     this.body = r;
                 }
             } else {
