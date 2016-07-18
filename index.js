@@ -97,19 +97,20 @@ db.query("SELECT mac, ip, sb, se FROM sessions WHERE status = 4 AND se > now()")
 console.log("value", trueUsers);*/
 
 // Запрос пользователей которые имеют доступ к инету authUsers
-db.query("SELECT mac, ip, mobile, pin, sb, se, status FROM sessions WHERE status > 0 AND status < 4").then((value) => {
-    value.forEach(elem => {
-        authUsers[elem.mac] = {
-            mac: elem.mac,
-            ip: elem.ip,
-            mobile: elem.mobile,
-            pin: elem.pin,
-            sb: new Date(Date.parse(elem.sb)),
-            se: new Date(Date.parse(elem.se))
-        };
+db.each("SELECT mac, ip, mobile, pin, sb, se, status FROM sessions WHERE status > 0 AND status < 4", [], elem => {
+    authUsers[elem.mac] = {
+        mac: elem.mac,
+        ip: elem.ip,
+        mobile: elem.mobile,
+        pin: elem.pin,
+        sb: new Date(Date.parse(elem.sb)),
+        se: new Date(Date.parse(elem.se))
+    };
+})
+    .then(data=>{
+        // you don't need this `.then`, only if you want to do something here:
+        console.log("authUsers ", authUsers);
     });
-    console.log("authUsers ", authUsers);
-});
 
 //
 
