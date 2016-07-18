@@ -236,15 +236,17 @@ app.use(function*(next) {
             if (r) {
                 if (urlParsed.pathname == '/index.html') {
                     this.response.status = 401;
-                    this.res.setHeader('WWW-Authenticate', 'Basic realm="myRealm"');
+                    //this.response.statusMessage = 'Not found';
+                    //this.res.setHeader('WWW-Authenticate', 'Basic realm="myRealm"');
                     console.log('401', 401);
                     //this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html');
                     this.body = r;
                 } else {
                     this.response.status = 511;
                     console.log('511', 511);
+                    console.log('this.response', this.request.host);
                     //this.status = 511;/**/
-                    this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html?url='+this.req.url);
+                    this.res.setHeader('refresh', '0; url=http://192.168.0.219/index.html?url="'+this.request.host+this.req.url+'"');
                     this.body = r;
                 }
             } else {
@@ -256,6 +258,8 @@ app.use(function*(next) {
     }
     return next;
 });
+
+
 
 
 
